@@ -10,8 +10,6 @@
 -author('Chad DePue <chad@inakanetworks.com>').
 -author('Fernando Benavides <fernando.benavides@inakanetworks.com>').
 
--include("edis.hrl").
-
 -behaviour(gen_server).
 
 %% -------------------------------------------------------------------

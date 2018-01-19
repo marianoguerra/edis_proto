@@ -11,8 +11,6 @@
 
 -export([get/1, set/2]).
 
--include("edis.hrl").
-
 -type config_option() :: listener_port_range | client_timeout | databases | requirepass | dir | backend.
 
 %% @doc sets configuration params

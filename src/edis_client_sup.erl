@@ -9,7 +9,6 @@
 -author('Fernando Benavides <fernando.benavides@inakanetworks.com>').
 -author('Chad DePue <chad@inakanetworks.com>').
 
--include("edis.hrl").
 -define(MANAGERS, 1). %%NOTE: Pump it up to reduce message_queue_lens on massive client initialization
 
 -behaviour(supervisor).

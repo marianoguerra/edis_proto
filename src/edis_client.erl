@@ -16,8 +16,6 @@
 -export([socket/2, command_start/2, arg_size/2, command_name/2, argument/2]).
 -export([disconnect/1]).
 
--include("edis.hrl").
-
 -define(FSM_TIMEOUT, 60000).
 
 -record(state, {socket            :: undefined | port(),

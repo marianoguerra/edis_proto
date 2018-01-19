@@ -9,8 +9,6 @@
 -author('Fernando Benavides <fernando.benavides@inakanetworks.com>').
 -author('Chad DePue <chad@inakanetworks.com>').
 
--include("edis.hrl").
-
 -behaviour(supervisor).
 
 -export([start_link/1, start_client/0, init/1]).
