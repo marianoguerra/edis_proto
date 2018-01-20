@@ -33,9 +33,10 @@ reload() ->
 %% @hidden
 -spec init(map()) -> {ok, {{one_for_one, 5, 10}, [supervisor:child_spec()]}}.
 init(Opts) ->
-  lager:info("Listener supervisor initialized"),
-  MinPort = maps:get(port_from, Opts, 6379),
-  MaxPort = maps:get(port_to, Opts, 6379),
+  MinPort = maps:get(min_port, Opts, 6379),
+  MaxPort = maps:get(max_port, Opts, 6379),
+  lager:info("Listener supervisor initialized, port range: ~p - ~p",
+             [MinPort, MaxPort]),
   Listeners =
     [{list_to_atom("edis-listener-" ++ integer_to_list(I)),
       {edis_listener, start_link, [I]}, permanent, brutal_kill, worker, [edis_listener]}
