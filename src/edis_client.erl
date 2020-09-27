@@ -54,7 +54,7 @@ disconnect(Client) ->
 %% @hidden
 -spec init(map()) -> {ok, socket, state(), ?FSM_TIMEOUT}.
 init(Opts=#{command_runner_mod := Mod}) ->
-  lager:info("start edis_client ~p", [Opts]),
+  logger:info("start edis_client ~p", [Opts]),
   {ok, socket, #state{command_runner=Mod}, ?FSM_TIMEOUT}.
 
 %% ASYNC EVENTS -------------------------------------------------------
@@ -67,16 +67,16 @@ socket({socket_ready, Socket}, State) ->
       {ok, {_Ip, Port}} -> Port;
       Error -> Error
     end,
-  lager:info("New Client: ~p ~n", [PeerPort]),
+  logger:info("New Client: ~p ~n", [PeerPort]),
   ok = inet:setopts(Socket, [{active, once}, {packet, line}, binary]),
   _ = erlang:process_flag(trap_exit, true), %% We want to know even if it stops normally
   {next_state, command_start, State#state{socket   = Socket,
                                           peerport = PeerPort}, hibernate};
 socket(timeout, State) ->
-  lager:alert("Timeout~n", []),
+  logger:alert("Timeout~n", []),
   {stop, timeout, State};
 socket(Other, State) ->
-  lager:alert("Unexpected message: ~p\n", [Other]),
+  logger:alert("Unexpected message: ~p\n", [Other]),
   {stop, {unexpected_event, Other}, State}.
 
 %% @hidden
@@ -87,14 +87,14 @@ command_start({data, <<"\n">>}, State) ->
   {next_state, command_start, State};
 command_start({data, <<"*", N/binary>>}, State) -> %% Unified Request Protocol
   {NArgs, "\r\n"} = string:to_integer(binary_to_list(N)),
-  lager:debug("URP command - ~p args~n",[NArgs]),
+  logger:debug("URP command - ~p args~n",[NArgs]),
   {next_state, arg_size, State#state{missing_args = NArgs, command_name = undefined, args = []}};
 command_start({data, OldCmd}, State) ->
   [Command|Args] = binary:split(OldCmd, [<<" ">>, <<"\r\n">>], [global,trim]),
-  lager:debug("Old protocol command ~p (~p args)~n",[Command, length(Args)]),
+  logger:debug("Old protocol command ~p (~p args)~n",[Command, length(Args)]),
   case last_arg(edis_util:upper(Command)) of
     inlined ->
-      lager:info("Run Command: ~p ~p", [edis_util:upper(Command), Args]),
+      logger:info("Run Command: ~p ~p", [edis_util:upper(Command), Args]),
       {next_state, command_start, State, hibernate};
     safe ->
       case lists:reverse(Args) of
@@ -116,7 +116,7 @@ command_start({data, OldCmd}, State) ->
       end
   end;
 command_start(Event, State) ->
-  lager:alert("Unexpected Event: ~p~n", [Event]),
+  logger:alert("Unexpected Event: ~p~n", [Event]),
   {stop, {unexpected_event, Event}, State}.
 
 %% @hidden
@@ -127,29 +127,29 @@ arg_size({data, <<"$", N/binary>>}, State) ->
       ok = err(State, io_lib:format("lenght of next arg expected. ~s received instead", [N])),
       {next_state, command_start, State, hibernate};
     {ArgSize, _Rest} ->
-      lager:debug("Arg Size: ~p ~n", [ArgSize]),
+      logger:debug("Arg Size: ~p ~n", [ArgSize]),
       {next_state, case State#state.command_name of
                      undefined -> command_name;
                      _Command -> argument
                    end, State#state{next_arg_size = ArgSize, buffer = <<>>}}
   end;
 arg_size(Event, State) ->
-    lager:alert("Unexpected Event: ~p~n", [Event]),
+    logger:alert("Unexpected Event: ~p~n", [Event]),
     {stop, {unexpected_event, Event}, State}.
 
 %% @hidden
 -spec command_name(term(), state()) -> {next_state, command_start, state(), hibernate} | {next_state, arg_size, state()} | {stop, {unexpected_event, term()}, state()}.
 command_name({data, Data}, State = #state{next_arg_size = Size, missing_args = 1}) ->
   <<Command:Size/binary, _Rest/binary>> = Data,
-  lager:debug("Command: ~p ~n", [Command]),
+  logger:debug("Command: ~p ~n", [Command]),
   run_command(edis_util:upper(Command), [], State),
   {next_state, command_start, State, hibernate};
 command_name({data, Data}, State = #state{next_arg_size = Size, missing_args = MissingArgs}) ->
   <<Command:Size/binary, _Rest/binary>> = Data,
-  lager:debug("Command: ~p ~n", [Command]),
+  logger:debug("Command: ~p ~n", [Command]),
   {next_state, arg_size, State#state{command_name = Command, missing_args = MissingArgs - 1}};
 command_name(Event, State) ->
-  lager:alert("Unexpected Event: ~p~n", [Event]),
+  logger:alert("Unexpected Event: ~p~n", [Event]),
   {stop, {unexpected_event, Event}, State}.
 
 %% @hidden
@@ -172,7 +172,7 @@ argument({data, Data}, State = #state{buffer        = Buffer,
       {next_state, argument, State#state{buffer = NewBuffer}}
   end;
 argument(Event, State) ->
-    lager:alert("Unexpected Event: ~p~n", [Event]),
+    logger:alert("Unexpected Event: ~p~n", [Event]),
     {stop, {unexpected_event, Event}, State}.
 
 %% OTHER EVENTS -------------------------------------------------------
@@ -189,19 +189,19 @@ handle_sync_event(Event, _From, StateName, StateData) ->
 %% @hidden
 -spec handle_info(term(), atom(), state()) -> term().
 handle_info({'EXIT', CmdRunner, Reason}, _StateName, State = #state{command_runner = CmdRunner}) ->
-  lager:debug("Command runner stopped: ~p~n", [Reason]),
+  logger:debug("Command runner stopped: ~p~n", [Reason]),
   {stop, Reason, State};
 handle_info({tcp, Socket, Bin}, StateName, #state{socket = Socket,
                                                   peerport = PeerPort} = StateData) ->
   % Flow control: enable forwarding of next TCP message
   ok = inet:setopts(Socket, [{active, false}]),
-  lager:debug("~p >> ~s", [PeerPort, Bin]),
+  logger:debug("~p >> ~s", [PeerPort, Bin]),
   Result = ?MODULE:StateName({data, Bin}, StateData),
   ok = inet:setopts(Socket, [{active, once}]),
   Result;
 handle_info({tcp_closed, Socket}, _StateName, #state{socket = Socket,
                                                      peerport = PeerPort} = StateData) ->
-  lager:debug("Disconnected ~p.~n", [PeerPort]),
+  logger:debug("Disconnected ~p.~n", [PeerPort]),
   {stop, normal, StateData};
 handle_info({pubsub_msg, Msg}, StateName, StateData) ->
   send_value(Msg, StateData),
@@ -215,7 +215,7 @@ terminate(normal, _StateName, #state{socket = Socket}) ->
   (catch gen_tcp:close(Socket)),
   ok;
 terminate(Reason, _StateName, #state{socket = Socket}) ->
-  lager:warning("Terminating client: ~p~n", [Reason]),
+  logger:warning("Terminating client: ~p~n", [Reason]),
   (catch gen_tcp:close(Socket)),
   ok.
 
@@ -241,7 +241,7 @@ run_command(Command, Args, State=#state{command_runner=Mod}) ->
         {error, _Partition, {_Code, Reason, _Details}} ->
                       send_error(Reason, State)
     end,
-    lager:info("~p ~p", [Reply, SendRes]),
+    logger:info("~p ~p", [Reply, SendRes]),
     Reply.
 
 send_ok(State) ->

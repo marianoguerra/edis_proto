@@ -35,7 +35,7 @@ reload() ->
 init(Opts) ->
   MinPort = maps:get(min_port, Opts, 6379),
   MaxPort = maps:get(max_port, Opts, 6379),
-  lager:info("Listener supervisor initialized, port range: ~p - ~p",
+  logger:info("Listener supervisor initialized, port range: ~p - ~p",
              [MinPort, MaxPort]),
   Listeners =
     [{list_to_atom("edis-listener-" ++ integer_to_list(I)),

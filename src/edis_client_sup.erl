@@ -56,7 +56,7 @@ count_clients() ->
 %% @hidden
 -spec init(map()) -> {ok, {{one_for_one, 5, 10}, [supervisor:child_spec()]}}.
 init(Opts) ->
-  lager:info("Client supervisor initialized (~p managers)~n", [?MANAGERS]),
+  logger:info("Client supervisor initialized (~p managers)~n", [?MANAGERS]),
   Managers =
     [{name(I), {edis_client_mgr, start_link, [Opts#{name => name(I)}]},
       permanent, brutal_kill, supervisor, [edis_client_mgr]}
