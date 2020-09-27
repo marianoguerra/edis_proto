@@ -1,16 +1,14 @@
 {application, edis_proto,
  [{description, "Allow erlang/BEAM applications to expose a Redis compatible protocol"},
-  {vsn, "0.1.0"},
+  {vsn, "0.2.0"},
   {registered, []},
   {applications,
    [kernel,
-    stdlib,
-    lager
+    stdlib
    ]},
   {env,[]},
   {modules, []},
 
-  {maintainers, ["Mariano Guerra"]},
   {licenses, ["Apache 2.0"]},
   {links, [{"Github", "https://github.com/marianoguerra/edis_proto"}]}
  ]}.
